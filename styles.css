@@ -1,0 +1,61 @@
+.wrapper {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+}
+
+.sections {
+  display: flex;
+}
+
+section {
+  margin: 0 20px;
+}
+
+.filter {
+  display: flex;
+  flex-direction: column;
+}
+
+.pattern {
+  display: flex;
+  flex-direction: column;
+}
+
+#patterns {
+  display: flex;
+  flex-direction: column;
+}
+
+#filter-btn {
+  max-width: 200px;
+  width: 100%;
+}
+
+table,
+th,
+td {
+  border: 1px solid black;
+  text-align: center;
+}
+
+table {
+  max-width: 400px;
+}
+
+#helper {
+  display: block;
+}
+
+@media only screen and (max-width: 600px) {
+  .sections {
+    display: flex;
+    flex-direction: column;
+  }
+  section {
+    margin: 0;
+  }
+  #helper {
+    display: none;
+  }
+}
