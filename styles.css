@@ -71,6 +71,7 @@ table {
 .guess {
   max-width: 120px;
   text-align: center;
+  text-transform: uppercase;
 }
 
 @media only screen and (max-width: 600px) {

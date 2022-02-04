@@ -59,7 +59,7 @@ Array.from(document.getElementsByClassName("guess-item")).forEach((element) => {
     const buttons = Array.from(element.getElementsByClassName("letter"));
     buttons.forEach((button, index) => {
       try {
-        button.value = patterns[index][0];
+        button.value = patterns[index][0].toUpperCase();
         const symbol = patterns[index][1];
         const value = {
           ["-"]: "grey",
@@ -84,7 +84,9 @@ const generateWord = () =>
       const includeSet = getSet("include-pattern").toLowerCase().split("");
 
       const removeDuplicates = getCheck("duplicate-letters");
-      const wordPatterns = getGuesses("guess").map(parsePattern);
+      const wordPatterns = getGuesses("guess")
+        .map((x) => x.toLowerCase())
+        .map(parsePattern);
 
       const wordOccurences = wordPatterns.flatMap((word) =>
         word.map(mapIncludesExcludes)
