@@ -16,7 +16,10 @@ const getGuesses = (classname) =>
 
 const parsePattern = (wordPattern) => {
   try {
-    return wordPattern.match(/.{1,2}/g).map((item) => item.split(""));
+    return wordPattern
+      .toLowerCase()
+      .match(/.{1,2}/g)
+      .map((item) => item.split(""));
   } catch {
     return [];
   }
