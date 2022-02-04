@@ -47,6 +47,32 @@ table {
   display: block;
 }
 
+#guesses {
+  display: flex;
+  flex-direction: column;
+}
+
+#guesses input {
+  margin-bottom: 6px;
+}
+
+.guess-item {
+  display: flex;
+  justify-content: space-between;
+  min-width: 300px;
+  align-items: baseline;
+}
+
+.letter {
+  width: 30px;
+  height: 30px;
+}
+
+.guess {
+  max-width: 120px;
+  text-align: center;
+}
+
 @media only screen and (max-width: 600px) {
   .sections {
     display: flex;
@@ -54,6 +80,7 @@ table {
   }
   section {
     margin: 0;
+    margin-bottom: 20px;
   }
   #helper {
     display: none;
