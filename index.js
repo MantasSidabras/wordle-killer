@@ -76,9 +76,10 @@ Array.from(document.getElementsByClassName("guess-item")).forEach((element) => {
 });
 
 const generateWord = () =>
-  fetch("./words5.txt")
+  fetch("./wordleDict.txt")
     .then((res) => res.text())
     .then((data) => data.split("\n"))
+    .then((data) => data.sort())
     .then((dict) => {
       const excludeSet = getSet("exclude-pattern").toLowerCase().split("");
       const includeSet = getSet("include-pattern").toLowerCase().split("");
@@ -149,13 +150,3 @@ filterBtn.onclick = () => {
   clearAll("suggestion");
   generateWord();
 };
-
-// const helpBtn = document.getElementById("help-btn");
-// helpBtn.onclick = (e) => {
-//   const helper = document.getElementById("helper");
-//   if (helper.style.display === "none") {
-//     helper.style.display = "block";
-//   } else {
-//     helper.style.display = "none";
-//   }
-// };
