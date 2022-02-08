@@ -1,7 +1,3 @@
-Array.prototype.random = function () {
-  return this[Math.floor(Math.random() * this.length)];
-};
-
 const getSet = (id) => document.getElementById(id).value;
 const getCheck = (id) => document.getElementById(id).checked;
 const getPatterns = (id) =>
@@ -116,13 +112,15 @@ const generateWord = () =>
       };
 
       console.log({ excludeSet, includeSet, excludes, includes, regexes });
-      const result = dict
-        .filter(removeDupicateLetterWords(removeDuplicates))
-        .filter(filterSet([...excludeSet, ...excludes])(false))
-        .filter(filterSet([...includeSet, ...includes])(true))
-        .filter((x) => regexes.every((pattern) => pattern.test(x)));
+      const result = addWeights(
+        dict
+          .filter(removeDupicateLetterWords(removeDuplicates))
+          .filter(filterSet([...excludeSet, ...excludes])(false))
+          .filter(filterSet([...includeSet, ...includes])(true))
+          .filter((x) => regexes.every((pattern) => pattern.test(x)))
+      ).map(({ word }) => word);
 
-      setSuggestion(result.random());
+      setSuggestion(result[0]);
       setResult(result);
     });
 
@@ -145,8 +143,70 @@ const setSuggestion = (result) => {
   document.getElementById("suggestion").innerText = result;
 };
 
-const filterBtn = document.getElementById("filter-btn");
-filterBtn.onclick = () => {
+const onClick = () => {
   clearAll("suggestion");
   generateWord();
+};
+
+const filterBtn = document.getElementById("filter-btn");
+filterBtn.onclick = onClick;
+
+const ENTER_CODE = "Enter";
+
+document.addEventListener("keydown", (e) => {
+  if (e.key == ENTER_CODE) {
+    onClick();
+  }
+});
+
+const COUNT_WEIGHT = 0.5;
+const POS_WEIGHT = 1;
+const NO_DUPLICATE_CHAR = true;
+
+const addWeights = (words) => {
+  const charStats = [];
+  words.forEach((word) => {
+    for (let i = 0; i < word.length; i++) {
+      const char = word.charAt(i);
+      let stat = charStats.find((stat) => stat.char === char);
+      if (!stat) {
+        stat = {
+          char,
+          count: 0,
+          0: 0,
+          1: 0,
+          2: 0,
+          3: 0,
+          4: 0,
+        };
+        charStats.push(stat);
+      }
+      stat.count++;
+      stat[i]++;
+    }
+  });
+
+  const charStatsMap = charStats.reduce((map, val) => {
+    map[val.char] = val;
+    return map;
+  }, {});
+
+  const wordsWithWeights = words
+    .map((word) => {
+      let weight = 0;
+      const usedChars = [];
+      for (let i = 0; i < word.length; i++) {
+        const char = word.charAt(i);
+        if (!NO_DUPLICATE_CHAR || !usedChars.includes(char)) {
+          usedChars.push(char);
+          const stat = charStatsMap[char];
+          weight += (stat?.[i] ?? 0) * POS_WEIGHT;
+          weight += (stat?.count ?? 0) * COUNT_WEIGHT;
+        }
+      }
+      return { word, weight };
+    })
+    .sort((a, b) => b.weight - a.weight);
+
+  return wordsWithWeights;
 };
