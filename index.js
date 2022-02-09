@@ -1,7 +1,3 @@
-Array.prototype.random = function () {
-  return this[Math.floor(Math.random() * this.length)];
-};
-
 const getSet = (id) => document.getElementById(id).value;
 const getCheck = (id) => document.getElementById(id).checked;
 const getPatterns = (id) =>
@@ -122,8 +118,10 @@ const generateWord = () =>
         .filter(filterSet([...includeSet, ...includes])(true))
         .filter((x) => regexes.every((pattern) => pattern.test(x)));
 
-      setSuggestion(result.random());
-      setResult(result);
+      const sortedResult = sortByWeight(result);
+
+      setSuggestion(sortedResult[0] ?? "-");
+      setResult(sortedResult);
     });
 
 const clearAll = (id) => {
@@ -145,8 +143,74 @@ const setSuggestion = (result) => {
   document.getElementById("suggestion").innerText = result;
 };
 
-const filterBtn = document.getElementById("filter-btn");
-filterBtn.onclick = () => {
+const onClick = () => {
   clearAll("suggestion");
   generateWord();
 };
+
+const filterBtn = document.getElementById("filter-btn");
+filterBtn.onclick = onClick;
+
+document.addEventListener("keydown", (e) => {
+  if (e.key == "Enter") {
+    onClick();
+  }
+});
+
+const COUNT_WEIGHT = 0.5;
+const POS_WEIGHT = 1;
+const SKIP_DUPLICATE_CHAR_WEIGHT = true;
+
+const sortByWeight = (words) => {
+  const charStats = getCharStats(words);
+  const wordsWithWeights = addWordWeights(words, charStats);
+
+  return wordsWithWeights
+    .sort((a, b) => b.weight - a.weight)
+    .map(({ word }) => word);
+};
+
+const getCharStats = (words) => {
+  const charStats = [];
+  words.forEach((word) => {
+    for (let i = 0; i < word.length; i++) {
+      const char = word.charAt(i);
+      let stat = charStats.find((stat) => stat.char === char);
+      if (!stat) {
+        stat = {
+          char,
+          count: 0,
+          0: 0,
+          1: 0,
+          2: 0,
+          3: 0,
+          4: 0,
+        };
+        charStats.push(stat);
+      }
+      stat.count++;
+      stat[i]++;
+    }
+  });
+
+  return charStats.reduce((map, val) => {
+    map[val.char] = val;
+    return map;
+  }, {});
+};
+
+const addWordWeights = (words, charStatsMap) =>
+  words.map((word) => {
+    let weight = 0;
+    const usedChars = [];
+    for (let i = 0; i < word.length; i++) {
+      const char = word.charAt(i);
+      if (!SKIP_DUPLICATE_CHAR_WEIGHT || !usedChars.includes(char)) {
+        usedChars.push(char);
+        const stat = charStatsMap[char];
+        weight += (stat?.[i] ?? 0) * POS_WEIGHT;
+        weight += (stat?.count ?? 0) * COUNT_WEIGHT;
+      }
+    }
+    return { word, weight };
+  });
