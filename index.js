@@ -112,16 +112,16 @@ const generateWord = () =>
       };
 
       console.log({ excludeSet, includeSet, excludes, includes, regexes });
-      const result = addWeights(
-        dict
-          .filter(removeDupicateLetterWords(removeDuplicates))
-          .filter(filterSet([...excludeSet, ...excludes])(false))
-          .filter(filterSet([...includeSet, ...includes])(true))
-          .filter((x) => regexes.every((pattern) => pattern.test(x)))
-      ).map(({ word }) => word);
+      const result = dict
+        .filter(removeDupicateLetterWords(removeDuplicates))
+        .filter(filterSet([...excludeSet, ...excludes])(false))
+        .filter(filterSet([...includeSet, ...includes])(true))
+        .filter((x) => regexes.every((pattern) => pattern.test(x)));
 
-      setSuggestion(result[0]);
-      setResult(result);
+      const sortedResult = sortByWeight(result);
+
+      setSuggestion(sortedResult[0] ?? "-");
+      setResult(sortedResult);
     });
 
 const clearAll = (id) => {
@@ -151,19 +151,26 @@ const onClick = () => {
 const filterBtn = document.getElementById("filter-btn");
 filterBtn.onclick = onClick;
 
-const ENTER_CODE = "Enter";
-
 document.addEventListener("keydown", (e) => {
-  if (e.key == ENTER_CODE) {
+  if (e.key == "Enter") {
     onClick();
   }
 });
 
 const COUNT_WEIGHT = 0.5;
 const POS_WEIGHT = 1;
-const NO_DUPLICATE_CHAR = true;
+const SKIP_DUPLICATE_CHAR_WEIGHT = true;
 
-const addWeights = (words) => {
+const sortByWeight = (words) => {
+  const charStats = getCharStats(words);
+  const wordsWithWeights = addWordWeights(words, charStats);
+
+  return wordsWithWeights
+    .sort((a, b) => b.weight - a.weight)
+    .map(({ word }) => word);
+};
+
+const getCharStats = (words) => {
   const charStats = [];
   words.forEach((word) => {
     for (let i = 0; i < word.length; i++) {
@@ -186,27 +193,24 @@ const addWeights = (words) => {
     }
   });
 
-  const charStatsMap = charStats.reduce((map, val) => {
+  return charStats.reduce((map, val) => {
     map[val.char] = val;
     return map;
   }, {});
-
-  const wordsWithWeights = words
-    .map((word) => {
-      let weight = 0;
-      const usedChars = [];
-      for (let i = 0; i < word.length; i++) {
-        const char = word.charAt(i);
-        if (!NO_DUPLICATE_CHAR || !usedChars.includes(char)) {
-          usedChars.push(char);
-          const stat = charStatsMap[char];
-          weight += (stat?.[i] ?? 0) * POS_WEIGHT;
-          weight += (stat?.count ?? 0) * COUNT_WEIGHT;
-        }
-      }
-      return { word, weight };
-    })
-    .sort((a, b) => b.weight - a.weight);
-
-  return wordsWithWeights;
 };
+
+const addWordWeights = (words, charStatsMap) =>
+  words.map((word) => {
+    let weight = 0;
+    const usedChars = [];
+    for (let i = 0; i < word.length; i++) {
+      const char = word.charAt(i);
+      if (!SKIP_DUPLICATE_CHAR_WEIGHT || !usedChars.includes(char)) {
+        usedChars.push(char);
+        const stat = charStatsMap[char];
+        weight += (stat?.[i] ?? 0) * POS_WEIGHT;
+        weight += (stat?.count ?? 0) * COUNT_WEIGHT;
+      }
+    }
+    return { word, weight };
+  });
