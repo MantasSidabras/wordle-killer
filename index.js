@@ -1,9 +1,7 @@
+const WORD_DICT = "./guessDict.txt";
+
 const getSet = (id) => document.getElementById(id).value;
 const getCheck = (id) => document.getElementById(id).checked;
-const getPatterns = (id) =>
-  Array.from(document.getElementById(id).childNodes)
-    .map((patternNode) => patternNode.value)
-    .filter(Boolean);
 
 const getGuesses = (classname) =>
   Array.from(document.getElementsByClassName(classname))
@@ -38,14 +36,6 @@ const mapIncludesExcludes = ([letter, symbol]) => {
   return [letter, value];
 };
 
-const getWords = Array.from(
-  Array.from(document.getElementsByClassName("render-word")).map(
-    (node) => node.childNodes
-  )
-);
-
-const renderWords = () => {};
-
 Array.from(document.getElementsByClassName("guess-item")).forEach((element) => {
   const guess = element.getElementsByClassName("guess");
   guess[0].oninput = (e) => {
@@ -72,10 +62,9 @@ Array.from(document.getElementsByClassName("guess-item")).forEach((element) => {
 });
 
 const generateWord = () =>
-  fetch("./wordleDict.txt")
+  fetch(WORD_DICT)
     .then((res) => res.text())
     .then((data) => data.split("\n"))
-    .then((data) => data.sort())
     .then((dict) => {
       const excludeSet = getSet("exclude-pattern").toLowerCase().split("");
       const includeSet = getSet("include-pattern").toLowerCase().split("");
@@ -85,44 +74,59 @@ const generateWord = () =>
         .map((x) => x.toLowerCase())
         .map(parsePattern);
 
-      const wordOccurences = wordPatterns.flatMap((word) =>
-        word.map(mapIncludesExcludes)
+      const words = filterWords(
+        dict,
+        excludeSet,
+        includeSet,
+        removeDuplicates,
+        wordPatterns
       );
-      const excludes = wordOccurences
-        .filter(([, value]) => !value)
-        .map(([letter]) => letter);
-      const includes = wordOccurences
-        .filter(([, value]) => value)
-        .map(([letter]) => letter);
 
-      const regexes = wordPatterns
-        .map((word) => word.map(mapToRegex).join(""))
-        .map((x) => new RegExp(x));
-
-      const filterSet = (set) => (include) => (x) =>
-        include ===
-        set[include ? "every" : "some"]((letter) => x.includes(letter));
-
-      const removeDupicateLetterWords = (active) => (x) => {
-        if (!active) {
-          return true;
-        }
-        const letters = x.split("");
-        return letters.length === Array.from(new Set(letters)).length;
-      };
-
-      console.log({ excludeSet, includeSet, excludes, includes, regexes });
-      const result = dict
-        .filter(removeDupicateLetterWords(removeDuplicates))
-        .filter(filterSet([...excludeSet, ...excludes])(false))
-        .filter(filterSet([...includeSet, ...includes])(true))
-        .filter((x) => regexes.every((pattern) => pattern.test(x)));
-
-      const sortedResult = sortByWeight(result);
-
-      setSuggestion(sortedResult[0] ?? "-");
-      setResult(sortedResult);
+      setSuggestion(words[0] ?? "-");
+      setResult(words);
     });
+
+const filterWords = (
+  dict,
+  excludeSet,
+  includeSet,
+  removeDuplicates,
+  wordPatterns
+) => {
+  const wordOccurences = wordPatterns.flatMap((word) =>
+    word.map(mapIncludesExcludes)
+  );
+  const excludes = wordOccurences
+    .filter(([, value]) => !value)
+    .map(([letter]) => letter);
+  const includes = wordOccurences
+    .filter(([, value]) => value)
+    .map(([letter]) => letter);
+
+  const regexes = wordPatterns
+    .map((word) => word.map(mapToRegex).join(""))
+    .map((x) => new RegExp(x));
+
+  const filterSet = (set) => (include) => (x) =>
+    include === set[include ? "every" : "some"]((letter) => x.includes(letter));
+
+  const removeDupicateLetterWords = (active) => (x) => {
+    if (!active) {
+      return true;
+    }
+    const letters = x.split("");
+    return letters.length === Array.from(new Set(letters)).length;
+  };
+
+  console.log({ excludeSet, includeSet, excludes, includes, regexes });
+  const result = dict
+    .filter(removeDupicateLetterWords(removeDuplicates))
+    .filter(filterSet([...excludeSet, ...excludes])(false))
+    .filter(filterSet([...includeSet, ...includes])(true))
+    .filter((x) => regexes.every((pattern) => pattern.test(x)));
+
+  return sortByWeight(result);
+};
 
 const clearAll = (id) => {
   const parent = document.getElementById(id);
@@ -214,3 +218,81 @@ const addWordWeights = (words, charStatsMap) =>
     }
     return { word, weight };
   });
+
+//-------------------------------Tests-------------------------------------
+const guessWord = (dict, guessedWords) => {
+  const excludeSet = [];
+  const includeSet = [];
+  const removeDuplicates = false;
+
+  const wordPatterns = guessedWords
+    .map((x) => x.toLowerCase())
+    .map(parsePattern);
+
+  const wordsFiltered = filterWords(
+    dict,
+    excludeSet,
+    includeSet,
+    removeDuplicates,
+    wordPatterns
+  );
+
+  return wordsFiltered[0];
+};
+
+const guessToUserInput = (guess, wordToGuess) => {
+  const signs = [];
+  for (let i = 0; i < guess.length; i++) {
+    if (guess[i] === wordToGuess[i]) {
+      signs.push("+");
+    } else if (wordToGuess.includes(guess[i])) {
+      signs.push("?");
+    } else {
+      signs.push("-");
+    }
+  }
+  let word = "";
+  for (let i = 0; i < guess.length; i++) {
+    word += `${guess[i]}${signs[i]}`;
+  }
+
+  return word;
+};
+
+const testSolve = async () => {
+  let guesses = 0;
+  let wordsGuessed = 0;
+
+  const dict = (await (await fetch("./guessDict.txt")).text()).split("\n");
+  const wordsToGuess = (await (await fetch("./guessDict.txt")).text()).split(
+    "\n"
+  );
+
+  wordsToGuess.forEach((wordToGuess) => {
+    wordsGuessed++;
+
+    if (wordsGuessed % 100 === 0) {
+      console.log(`Test in progress. (${wordsGuessed})`);
+    }
+
+    const prevGuesses = [];
+    let guess = guessWord(dict, prevGuesses, dict);
+
+    while (guess !== undefined) {
+      guesses++;
+      if (guess === wordToGuess) {
+        break;
+      }
+
+      prevGuesses.push(guessToUserInput(guess, wordToGuess));
+      guess = guessWord(dict, prevGuesses);
+      if (guess === undefined) {
+        console.log("WORD NOT GUESSED");
+      }
+    }
+  });
+
+  console.log(`Guessed ${wordsGuessed} words. Avg: ${guesses / wordsGuessed}`);
+};
+
+// testSolve();
